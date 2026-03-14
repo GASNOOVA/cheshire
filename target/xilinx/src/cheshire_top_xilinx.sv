@@ -126,6 +126,14 @@ module cheshire_top_xilinx import cheshire_pkg::*; #(
   `else
     ret.Usb = 0;
   `endif
+
+  // NMC single-tile external AXI slave window
+  ret.AxiExtNumSlv   = 1;
+  ret.AxiExtNumRules = 1;
+  ret.AxiExtRegionIdx  [0] = 0;
+  ret.AxiExtRegionStart[0] = 64'h7000_0000;
+  ret.AxiExtRegionEnd  [0] = 64'h7004_0000;
+
   `ifdef USE_CFG_REGS
     ret.RegExtNumSlv   = 1;
     ret.RegExtNumRules = 1;
@@ -151,6 +159,14 @@ module cheshire_top_xilinx import cheshire_pkg::*; #(
   // Configure cheshire for FPGA mapping
   localparam cheshire_cfg_t FPGACfg = gen_cheshire_xilinx_cfg();
   `CHESHIRE_TYPEDEF_ALL(, FPGACfg)
+
+  // NMC AXI slave parameters
+  localparam logic [63:0] NMC_BASE = 64'h7000_0000;
+  localparam logic [63:0] NMC_SIZE = 64'h0004_0000;
+  localparam int unsigned NMC_EXT_IDX = 0;
+
+  axi_slv_req_t axi_nmc_req [1];
+  axi_slv_rsp_t axi_nmc_rsp [1];
 
   ////////////////////////
   //  Clock Generation  //
@@ -635,8 +651,8 @@ module cheshire_top_xilinx import cheshire_pkg::*; #(
     .axi_llc_mst_rsp_i  ( axi_llc_mst_rsp ),
     .axi_ext_mst_req_i  ( '0 ),
     .axi_ext_mst_rsp_o  ( ),
-    .axi_ext_slv_req_o  ( ),
-    .axi_ext_slv_rsp_i  ( '0 ),
+    .axi_ext_slv_req_o  ( axi_nmc_req ),
+    .axi_ext_slv_rsp_i  ( axi_nmc_rsp ),
 `ifdef USE_CFG_REGS
     .reg_ext_slv_req_o  ( cfg_reg_req ),
     .reg_ext_slv_rsp_i  ( cfg_reg_rsp ),
@@ -696,5 +712,14 @@ module cheshire_top_xilinx import cheshire_pkg::*; #(
     .usb_dp_o,
     .usb_dp_oe_o
   );
+
+nmc_wrap #(
+  .NMC_BASE ( NMC_BASE )
+) i_nmc_wrap (
+  .clk_i     ( soc_clk                  ),
+  .rst_ni    ( rst_n                    ),
+  .axi_req_i ( axi_nmc_req[NMC_EXT_IDX] ),
+  .axi_rsp_o ( axi_nmc_rsp[NMC_EXT_IDX] )
+);
 
 endmodule
