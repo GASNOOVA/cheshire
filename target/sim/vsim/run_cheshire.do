@@ -13,11 +13,12 @@ if {[catch {source compile.cheshire_soc.tcl} msg]} {
   quit -code 1
 }
 
-# Start simulation in pure batch mode
-vsim -c \
-  -suppress 8386 \
-  work.tb_cheshire_soc \
-  "+BOOTMODE=$BOOTMODE" \
-  "+PRELMODE=$PRELMODE" \
-  "+BINARY=$BINARY" \
-  -do "run -all; quit -f"
+# Load design using official Cheshire start script
+if {[catch {source start.cheshire_soc.tcl} msg]} {
+  puts "START FAILED: $msg"
+  quit -code 1
+}
+
+# Run simulation and exit
+run -all
+quit -f
